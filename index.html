@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BookBoom</title>
+<meta name="description" content="Your personal library for reading and studying PDFs">
+<meta name="theme-color" content="#1f3a5f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="static/img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="static/img/icon-maskable-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BookBoom">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="static/css/app.css">
+<script src="static/js/boot.js"></script>
+</head>
+<body>
+<div class="server-down" id="serverDown" hidden><span data-i18n="serverDown">BookBoom's server isn't running. Start it on your computer (run.bat or run.sh), then tap Retry.</span> <button class="btn small" id="serverRetry" data-i18n="retry">Retry</button></div>
+<div id="app">
+  <header class="topbar">
+    <a class="brand" href="#/library" aria-label="BookBoom">
+      <img src="static/img/icon.svg" alt="" width="34" height="34">
+      <span class="brand-name" data-i18n="appName">BookBoom</span>
+    </a>
+    <nav class="tabs" role="tablist">
+      <a href="#/library" data-view="library"><svg><use href="#i-books"/></svg><span data-i18n="library">Library</span></a>
+      <a href="#/notes" data-view="notes"><svg><use href="#i-note"/></svg><span data-i18n="notes">Notes</span></a>
+      <a href="#/study" data-view="study"><svg><use href="#i-cards"/></svg><span data-i18n="study">Study</span><b class="badge" id="dueBadge" hidden></b></a>
+      <a href="#/stats" data-view="stats"><svg><use href="#i-chart"/></svg><span data-i18n="stats">Progress</span></a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-btn" id="globalSearchBtn" data-i18n-title="searchAll" title="Search everything (/)"><svg><use href="#i-search"/></svg></button>
+      <button class="icon-btn" id="langBtn" title="فارسی / English"><span id="langLabel">فا</span></button>
+      <button class="icon-btn" id="themeBtn" data-i18n-title="theme" title="Theme"><svg><use href="#i-moon"/></svg></button>
+      <button class="btn install-btn" id="installBtn" hidden><svg><use href="#i-download"/></svg><span data-i18n="installApp">Install app</span></button>
+      <button class="icon-btn" id="settingsBtn" data-i18n-title="settings" title="Settings"><svg><use href="#i-gear"/></svg></button>
+      <button class="btn primary" id="addBtn"><svg><use href="#i-plus"/></svg><span data-i18n="addBooks">Add books</span></button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- LIBRARY -->
+    <section class="view" id="view-library">
+      <div id="continueCard"></div>
+      <div class="lib-toolbar">
+        <div class="seg" id="statusFilter">
+          <button data-f="all" class="on" data-i18n="all">All</button>
+          <button data-f="reading" data-i18n="reading">Reading</button>
+          <button data-f="unread" data-i18n="unread">Unread</button>
+          <button data-f="finished" data-i18n="finished">Finished</button>
+          <button data-f="fav" data-i18n="favorites">Favorites</button>
+        </div>
+        <div class="lib-right">
+          <label class="field-inline"><svg><use href="#i-filter"/></svg>
+            <input id="libFilter" type="search" data-i18n-ph="filterBooks" placeholder="Filter books…">
+          </label>
+          <select id="sortSel" aria-label="Sort">
+            <option value="recent" data-i18n="sortRecent">Recently read</option>
+            <option value="added" data-i18n="sortAdded">Recently added</option>
+            <option value="title" data-i18n="sortTitle">Title</option>
+            <option value="author" data-i18n="sortAuthor">Author</option>
+            <option value="progress" data-i18n="sortProgress">Progress</option>
+          </select>
+          <button class="icon-btn" id="layoutBtn" data-i18n-title="layout" title="Grid / list"><svg><use href="#i-grid"/></svg></button>
+        </div>
+      </div>
+      <div class="chips" id="collectionChips"></div>
+      <div id="bookGrid" class="book-grid"></div>
+      <div id="emptyLib" class="empty" hidden>
+        <img src="static/img/icon.svg" alt="" width="88" height="88">
+        <h2 data-i18n="emptyTitle">Your shelf is waiting</h2>
+        <p data-i18n="emptyText">Drop PDF files anywhere on this page, or press Add books. You can also put PDFs in the data/inbox folder.</p>
+        <button class="btn primary big" id="emptyAdd"><svg><use href="#i-plus"/></svg><span data-i18n="addBooks">Add books</span></button>
+      </div>
+    </section>
+
+    <!-- NOTES -->
+    <section class="view" id="view-notes" hidden>
+      <div class="view-head">
+        <h1 data-i18n="allNotes">Notes &amp; highlights</h1>
+        <div class="lib-right">
+          <label class="field-inline"><svg><use href="#i-search"/></svg><input id="notesQ" type="search" data-i18n-ph="searchNotes" placeholder="Search notes…"></label>
+          <select id="notesBook"></select>
+          <div class="color-filter" id="notesColor"></div>
+        </div>
+      </div>
+      <div id="notesList" class="notes-list"></div>
+    </section>
+
+    <!-- STUDY -->
+    <section class="view" id="view-study" hidden>
+      <div class="view-head">
+        <h1 data-i18n="study">Study</h1>
+        <div class="lib-right">
+          <select id="studyBook"></select>
+          <button class="btn" id="newCardBtn"><svg><use href="#i-plus"/></svg><span data-i18n="newCard">New card</span></button>
+          <button class="icon-btn" id="cardsIO" data-i18n-title="importExport" title="Import / export cards"><svg><use href="#i-dots"/></svg></button>
+          <input type="file" id="cardsFile" accept=".txt,.tsv,.csv,text/plain,text/csv" hidden>
+        </div>
+      </div>
+      <div id="reviewBox" class="review-box"></div>
+      <div class="cards-head"><h2 class="sub"><span data-i18n="allCards">All cards</span> <small id="cardCount"></small></h2>
+        <input id="cardSearch" type="search" data-i18n-ph="searchCards" placeholder="Search cards…"></div>
+      <div id="cardList" class="card-list"></div>
+      <div class="cards-head"><h2 class="sub"><span data-i18n="lookedUp">Words you looked up</span> <small id="lookupCount"></small></h2>
+        <button class="btn small" id="lookupAll" hidden></button> <button class="btn small" id="lookupClear" data-i18n="clearList" hidden>Clear list</button></div>
+      <div id="lookupList" class="lookup-list"></div>
+    </section>
+
+    <!-- STATS -->
+    <section class="view" id="view-stats" hidden>
+      <div class="view-head"><h1 data-i18n="stats">Progress</h1></div>
+      <div id="statsBox"></div>
+    </section>
+  </main>
+</div>
+
+<!-- READER -->
+<div id="reader" class="reader" hidden>
+  <header class="r-bar">
+    <button class="icon-btn" id="rBack" data-i18n-title="back" title="Back to library (Esc)"><svg class="flip"><use href="#i-back"/></svg></button>
+    <button class="icon-btn" id="rSide" data-i18n-title="sidebar" title="Sidebar (S)"><svg><use href="#i-side"/></svg></button>
+    <div class="r-title"><b id="rTitle"></b><small id="rSub"></small></div>
+    <div class="r-nav">
+      <button class="icon-btn" id="rPrev" data-i18n-title="prevPage" title="Previous page"><svg class="flip"><use href="#i-left"/></svg></button>
+      <input id="rPage" inputmode="numeric" aria-label="Page"><span class="r-of">/ <span id="rPages">0</span></span>
+      <button class="icon-btn" id="rNext" data-i18n-title="nextPage" title="Next page"><svg class="flip"><use href="#i-right"/></svg></button>
+    </div>
+    <div class="r-zoom">
+      <button class="icon-btn" id="rZoomOut" title="−"><svg><use href="#i-minus"/></svg></button>
+      <select id="rZoom">
+        <option value="width" data-i18n="fitWidth">Fit width</option>
+        <option value="page" data-i18n="fitPage">Fit page</option>
+        <option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option>
+        <option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option>
+      </select>
+      <button class="icon-btn" id="rZoomIn" title="+"><svg><use href="#i-plus"/></svg></button>
+    </div>
+    <div class="r-tools">
+      <button class="icon-btn" id="rFind" data-i18n-title="findInBook" title="Find in book (Ctrl+F)"><svg><use href="#i-search"/></svg></button>
+      <button class="icon-btn" id="rInk" data-i18n-title="inkMode" title="Write on the page (I)"><svg><use href="#i-pen"/></svg></button>
+      <button class="icon-btn" id="rBm" data-i18n-title="bookmarkPage" title="Bookmark this page (B)"><svg><use href="#i-bm"/></svg></button>
+      <button class="icon-btn" id="rTint" data-i18n-title="pageTint" title="Page colour (N)"><svg><use href="#i-drop"/></svg></button>
+      <button class="icon-btn" id="rSpread" data-i18n-title="twoPages" title="Two pages side by side (D)"><svg><use href="#i-spread"/></svg></button>
+      <button class="icon-btn" id="rFocus" data-i18n-title="focus" title="Focus mode (F)"><svg><use href="#i-expand"/></svg></button>
+      <button class="icon-btn" id="rMore" data-i18n-title="more" title="More"><svg><use href="#i-dots"/></svg></button>
+    </div>
+  </header>
+  <div class="r-body">
+    <aside class="r-side" id="rSidePanel">
+      <div class="seg small" id="rSideTabs">
+        <button data-t="toc" class="on" data-i18n="contents">Contents</button>
+        <button data-t="thumbs" data-i18n="pagesTab">Pages</button>
+        <button data-t="bm" data-i18n="bookmarks">Bookmarks</button>
+        <button data-t="notes" data-i18n="notes">Notes</button>
+        <button data-t="find" data-i18n="find">Find</button>
+      </div>
+      <div class="r-side-body" id="rSideBody"></div>
+    </aside>
+    <div class="r-scroll" id="rScroll" tabindex="0">
+      <div class="r-pages" id="rPagesBox"></div>
+    </div>
+    <div class="ls-bar" id="lsBar" hidden role="region" aria-label="Listen">
+      <svg class="ls-ico"><use href="#i-headphones"/></svg>
+      <button class="icon-btn" id="lsPrev" data-i18n-title="prevSentence" title="Previous sentence ([)"><svg><use href="#i-skipback"/></svg></button>
+      <button class="icon-btn ls-play" id="lsPlay" title="Pause (Space)"><svg><use href="#i-pause"/></svg></button>
+      <button class="icon-btn" id="lsNext" data-i18n-title="nextSentence" title="Next sentence (])"><svg><use href="#i-skipfwd"/></svg></button>
+      <span class="ls-info" id="lsInfo"></span>
+      <select id="lsRate" data-i18n-title="speed" title="Speed"></select>
+      <button class="icon-btn" id="lsMic" data-i18n-title="checkPron" title="Check my pronunciation (M)"><svg><use href="#i-mic"/></svg></button>
+      <button class="icon-btn" id="lsClose" data-i18n-title="stopListening" title="Stop (Esc)"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <div class="ls-pron" id="lsPron" hidden role="status" aria-live="polite"></div>
+    <aside class="practice" id="practice" hidden>
+      <div class="pr-bar"><svg class="pr-ico"><use href="#i-mic"/></svg><b data-i18n="practiceTitle">Speaking practice</b><span class="hint" id="prPage"></span>
+        <button class="btn small" id="prLoad" data-i18n="loadThisPage" hidden>Use this page</button>
+        <span class="spacer"></span><button class="icon-btn" id="prClose" data-i18n-title="close" title="Close"><svg><use href="#i-close"/></svg></button></div>
+      <div class="pr-opts"><div class="hint" id="prModeHint"></div><div class="pr-roles" id="prRoles"></div>
+        <div class="pr-checks"><label class="pr-only-role"><input type="checkbox" id="prHide"> <span data-i18n="hideMine">Hide my lines</span></label>
+        <label class="pr-only-shadow"><input type="checkbox" id="prPause"> <span data-i18n="pauseRepeat">Pause so I can repeat</span></label></div></div>
+      <div class="pr-lines" id="prLines"></div>
+      <div class="pr-timer"><i id="prTimer"></i></div>
+      <div class="pr-ctl">
+        <button class="btn primary" id="prPlay"><svg><use href="#i-play"/></svg><span data-i18n="startPractice">Start</span></button>
+        <button class="btn" id="prNext" hidden><span data-i18n="nextLine">Next</span> <kbd>Space</kbd></button>
+        <span class="pr-status" id="prStatus"></span><span class="spacer"></span>
+        <button class="btn" id="prRec"><svg><use href="#i-mic"/></svg><span data-i18n="record">Record me</span></button><span id="prRecTime" class="hint"></span>
+      </div>
+      <div class="pr-recs" id="prRecs"></div>
+    </aside>
+    <aside class="peek" id="peek" hidden>
+      <div class="peek-bar">
+        <b data-i18n="peekTitle">Side page</b>
+        <button class="icon-btn" id="peekPrev" data-i18n-title="prevPage" title="Previous page"><svg class="flip"><use href="#i-left"/></svg></button>
+        <input id="peekPage" inputmode="numeric" aria-label="Page">
+        <button class="icon-btn" id="peekNext" data-i18n-title="nextPage" title="Next page"><svg class="flip"><use href="#i-right"/></svg></button>
+        <button class="btn small" id="peekKey" data-i18n="answerKey" hidden>Answer key</button>
+        <span class="spacer"></span>
+        <button class="icon-btn" id="peekGo" data-i18n-title="peekGo" title="Go to this page"><svg><use href="#i-books"/></svg></button>
+        <button class="icon-btn" id="peekClose" data-i18n-title="close" title="Close"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="peek-body" id="peekBody"></div>
+    </aside>
+  </div>
+  <div class="ink-bar" id="inkBar" hidden>
+    <button class="icon-btn on" data-tool="pen" data-i18n-title="inkPen" title="Pen"><svg><use href="#i-pen"/></svg></button>
+    <button class="icon-btn" data-tool="hl" data-i18n-title="inkHl" title="Highlighter"><svg><use href="#i-drop"/></svg></button>
+    <button class="icon-btn" data-tool="eraser" data-i18n-title="inkEraser" title="Eraser"><svg><use href="#i-eraser"/></svg></button>
+    <span class="ink-sep"></span>
+    <button class="swatch on" data-color="#1f3a8a" style="--c:#1f3a8a" title="Blue"></button>
+    <button class="swatch" data-color="#111111" style="--c:#111111" title="Black"></button>
+    <button class="swatch" data-color="#e11d48" style="--c:#e11d48" title="Red"></button>
+    <button class="swatch" data-color="#16a34a" style="--c:#16a34a" title="Green"></button>
+    <button class="swatch" data-color="#facc15" style="--c:#facc15" title="Yellow"></button>
+    <span class="ink-sep"></span>
+    <button class="icon-btn ink-size" data-size="1" title="Thin"><i style="--s:3px"></i></button>
+    <button class="icon-btn ink-size on" data-size="2" title="Medium"><i style="--s:6px"></i></button>
+    <button class="icon-btn ink-size" data-size="3" title="Thick"><i style="--s:10px"></i></button>
+    <span class="ink-sep"></span>
+    <button class="icon-btn" id="inkUndo" data-i18n-title="undo" title="Undo (Ctrl+Z)"><svg><use href="#i-undo"/></svg></button>
+    <button class="icon-btn" id="inkClear" data-i18n-title="clearInk" title="Clear this page"><svg><use href="#i-trash"/></svg></button>
+    <button class="btn small primary" id="inkDone" data-i18n="done">Done</button>
+  </div>
+  <div class="r-progress"><i id="rProgress"></i></div>
+  <div class="r-timer" id="rTimer" title="Reading time this session"></div>
+  <button class="focus-exit" id="focusExit" hidden><svg><use href="#i-shrink"/></svg></button>
+  <div class="sel-pop" id="selPop" hidden>
+    <div class="swatches"></div>
+    <button data-a="speak" data-i18n-title="pronounce" title="Read aloud"><svg><use href="#i-speak"/></svg></button>
+    <button data-a="listen" data-i18n-title="listenFromHere" title="Read the book aloud from here"><svg><use href="#i-headphones"/></svg></button>
+    <button data-a="define" data-i18n-title="lookUp" title="Meaning & translation"><svg><use href="#i-dict"/></svg></button>
+    <button data-a="note" data-i18n-title="addNote" title="Add note"><svg><use href="#i-note"/></svg></button>
+    <button data-a="card" data-i18n-title="makeCard" title="Make flashcard"><svg><use href="#i-cards"/></svg></button>
+    <button data-a="cloze" data-i18n-title="clozeCard" title="Fill-in-the-blank card"><svg><use href="#i-blank"/></svg></button>
+    <button data-a="copy" data-i18n-title="copy" title="Copy"><svg><use href="#i-copy"/></svg></button>
+    <button data-a="search" data-i18n-title="findInBook" title="Find in book"><svg><use href="#i-search"/></svg></button>
+  </div>
+</div>
+
+<!-- generic modal -->
+<dialog id="modal" class="modal"><form method="dialog" id="modalForm"></form></dialog>
+<input type="file" id="fileInput" accept="application/pdf,.pdf" multiple hidden>
+<div id="dropZone" class="drop-zone" hidden><div><svg><use href="#i-upload"/></svg><p data-i18n="dropHere">Drop PDFs to add them to your library</p></div></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="uploadBar" class="upload-bar" hidden><span id="uploadText"></span><i><b id="uploadFill"></b></i></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-books" viewBox="0 0 24 24"><path d="M4 4h4v16H4zM10 4h4v16h-4zM16.5 5.2l3.8-1 3.2 15.5-3.8 1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM15 3v4h4M8 11h8M8 15h8M8 19h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-cards" viewBox="0 0 24 24"><rect x="3" y="7" width="14" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 4h12a2 2 0 0 1 2 2v11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M10.3 3.2h3.4l.5 2.4 1.7.9 2.3-.8 1.7 2.9-1.8 1.7v1.9l1.8 1.7-1.7 2.9-2.3-.8-1.7.9-.5 2.4h-3.4l-.5-2.4-1.7-.9-2.3.8-1.7-2.9 1.8-1.7v-1.9L3.9 8.6l1.7-2.9 2.3.8 1.7-.9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-side" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 4v16" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-bm" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-bm-on" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z" fill="currentColor" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-spread" viewBox="0 0 24 24"><path d="M3 5h8v14H3zM13 5h8v14h-8z" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></symbol>
+    <symbol id="i-speak" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-dict" viewBox="0 0 24 24"><path d="M5 4.5h11a2 2 0 0 1 2 2V20H7a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M5 18a2 2 0 0 1 2-2h11" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m9 13 2.2-5.5L13.4 13M9.8 11.2h2.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v4h16v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-star-on" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" fill="currentColor"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></g></symbol>
+    <symbol id="i-blank" viewBox="0 0 24 24"><path d="M3 8h4M17 8h4M3 16h18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M9 9.5h6" stroke="currentColor" stroke-width="2.2" stroke-dasharray="2 1.5"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M15 4l5 5L9 20H4v-5zM12.5 6.5l5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3 22h18" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".5"/></symbol>
+    <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M8 20h12M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L11 19H8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7H4V2M4.5 7A8 8 0 1 1 6 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></symbol>
+<symbol id="i-skipback" viewBox="0 0 24 24"><path d="M6 5v14M19 5.5v13L9 12z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor"/></symbol>
+<symbol id="i-skipfwd" viewBox="0 0 24 24"><path d="M18 5v14M5 5.5v13L15 12z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor"/></symbol>
+<symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="3" y="14" width="5" height="7" rx="2" fill="currentColor"/><rect x="16" y="14" width="5" height="7" rx="2" fill="currentColor"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 22c4 0 7-2.8 7-7 0-4.5-4-7-4.5-11-2 1.5-3.5 4-3.5 6-1-.8-1.5-2-1.5-3C7 9 5 11.5 5 15c0 4.2 3 7 7 7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+<script src="static/js/web-boot.js"></script>
+<script src="static/vendor/fflate.min.js"></script>
+<script src="static/js/engine.js"></script>
+<script src="static/js/localapi.js"></script>
+<script src="static/js/app.bundle.js"></script>
+</body>
+</html>
