@@ -24,7 +24,7 @@ try { $listener.Start() } catch {
 Write-Host "BookBoom is running at $url"
 Write-Host "Keep this window open while you use it (after you install the app it also works offline). Close the window to stop."
 try { Start-Process $url } catch { Write-Host "Open $url in your browser." }
-$rootFull = [IO.Path]::GetFullPath($root)
+$rootFull = [IO.Path]::GetFullPath($root).TrimEnd('\') + '\'   # trailing \ so a sibling folder like "web-dist2" never matches
 while ($listener.IsListening) {
   try {
     $ctx = $listener.GetContext()

@@ -27,6 +27,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=ROOT, **kw)
 
+    def send_head(self):
+        # only answer this computer's own addresses: a web page that points its own name at 127.0.0.1
+        # (DNS rebinding) gets nothing
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]").lower()
+        if host not in ("localhost", "127.0.0.1", "::1"):
+            self.send_error(403)
+            return None
+        return super().send_head()
+
     def end_headers(self):
         if self.path.split("?")[0] in ("/", "/index.html", "/sw.js"):
             self.send_header("Cache-Control", "no-cache")

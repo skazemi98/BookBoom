@@ -25,10 +25,17 @@
     const src = original && typeof original !== 'string' ? original : null;
     opts.method = (init && init.method) || (src && src.method) || 'GET';
     opts.headers = (init && init.headers) || (src && src.headers) || undefined;
+    opts.method = String(opts.method).toUpperCase();
+    const hasBody = !['GET', 'HEAD'].includes(opts.method);
     let body = init && init.body;
-    if (body === undefined && src && !['GET', 'HEAD'].includes(opts.method)) body = await src.clone().blob();
-    if (body !== undefined && body !== null && !['GET', 'HEAD'].includes(opts.method.toUpperCase())) opts.body = body;
+    if (body === undefined && src && hasBody) body = await src.clone().blob();
+    // FormData (books, a backup to restore) is handed over as it is: turning it into a multipart body and parsing
+    // it back would copy every PDF in memory. Blobs (recordings) are passed along the same way.
+    const form = hasBody && typeof FormData !== 'undefined' && body instanceof FormData ? body : null;
+    if (body !== undefined && body !== null && hasBody && !form) opts.body = body;
     const req = new Request(u.href, opts);
+    if (form) req._form = form;
+    else if (hasBody && body instanceof Blob) req._body = body;
     try { return await KY.handle(req, u.pathname.slice('/api/'.length), u); }
     catch (err) { return new Response(JSON.stringify({ error: String((err && err.message) || err) }), { status: 500, headers: { 'Content-Type': 'application/json' } }); }
   }
@@ -42,8 +49,10 @@
   // <img src="api/...">, <audio src="api/..."> and friends: swap in a blob: url made from the same data
   const blobs = new Map();
   const ATTR = 'src';
+  // <img data-ky-src="api/..."> works too: the browser then never tries to load the api/ address itself
+  // (on file:// or before the service worker runs that shows a "failed to load" error in the console)
   async function swap(el) {
-    const raw = el.getAttribute(ATTR);
+    const raw = el.getAttribute('data-ky-src') || el.getAttribute(ATTR);
     if (!raw || el.dataset.kyApi === raw) return;
     const sub = apiPath(raw);
     if (sub === null) return;
@@ -56,9 +65,9 @@
       blobs.set(raw, url);
       if (blobs.size > 400) { const [k, v] = blobs.entries().next().value; blobs.delete(k); URL.revokeObjectURL(v); }
     }
-    if (el.getAttribute(ATTR) === raw) { el.setAttribute(ATTR, url); el.dataset.kyApi = url; }
+    if ((el.getAttribute('data-ky-src') || el.getAttribute(ATTR)) === raw) { el.removeAttribute('data-ky-src'); el.setAttribute(ATTR, url); el.dataset.kyApi = url; }
   }
-  const SEL = 'img[src*="api/"],audio[src*="api/"],source[src*="api/"],video[src*="api/"]';
+  const SEL = 'img[src*="api/"],audio[src*="api/"],source[src*="api/"],video[src*="api/"],[data-ky-src]';
   function scan(root) {
     if (root.nodeType !== 1) return;
     if (root.matches && root.matches(SEL)) swap(root);
@@ -69,7 +78,7 @@
       if (m.type === 'attributes') scan(m.target);
       else m.addedNodes.forEach(scan);
     }
-  }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src'] });
+  }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src', 'data-ky-src'] });
   document.addEventListener('DOMContentLoaded', () => scan(document.documentElement));
 
   // links to api/ files (notes export etc.) download instead of navigating to a page that doesn't exist
